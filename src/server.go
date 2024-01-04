@@ -4,14 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
 
 type Server struct {
 	DB     *gorm.DB
 	Router *mux.Router
+}
+
+type AppConfig struct {
+	AppName string
+	AppPort string
 }
 
 func (server *Server) Initialize() {
@@ -27,7 +34,16 @@ func (server *Server) Run(addr string) {
 
 func Run() {
 	var server = Server{}
+	var appConfig = AppConfig{}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error to load env")
+	}
+
+	appConfig.AppName = os.Getenv("APP_NAME")
+	appConfig.AppPort = os.Getenv("APP_PORT")
 
 	server.Initialize()
-	server.Run(":9000")
+	server.Run(":" + appConfig.AppPort)
 }
