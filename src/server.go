@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/seronz/api/config"
 	"gorm.io/gorm"
 )
 
@@ -35,6 +36,7 @@ func (server *Server) Run(addr string) {
 func Run() {
 	var server = Server{}
 	var appConfig = AppConfig{}
+	config.Connect()
 
 	err := godotenv.Load()
 	if err != nil {
