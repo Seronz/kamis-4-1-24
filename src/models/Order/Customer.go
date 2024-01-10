@@ -20,7 +20,7 @@ type Customer struct {
 	Address2   string `json:"address_2" gorm:"size:100"`
 	Phone      string `json:"phone" gorm:"size:50"`
 	Email      string `json:"email" gorm:"size:100"`
-	PostCode   string `json:"size:100"`
+	PostCode   string `json:"size:100" gorm:"size:100"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }

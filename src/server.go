@@ -1,6 +1,7 @@
 package src
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/seronz/api/config"
+	"github.com/seronz/api/src/utils/seeder"
+	"github.com/urfave/cli"
 	"gorm.io/gorm"
 )
 
@@ -30,8 +33,13 @@ func (server *Server) Initialize() {
 	if config.DB == nil {
 		log.Println("error ini nil")
 	}
+}
 
+func (server *Server) InitializeDB() {
 	server.DB = config.DB
+}
+
+func (server *Server) dbMigrate() {
 	for _, model := range RegistryModels() {
 		err := server.DB.Debug().AutoMigrate(model.Models)
 
@@ -41,6 +49,49 @@ func (server *Server) Initialize() {
 	}
 	fmt.Println("migration success...")
 
+	// err := seeder.DBSeed(server.DB)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+}
+
+func (server *Server) initCommands(config AppConfig) {
+	server.InitializeDB()
+	cmdApp := cli.NewApp()
+	cmdApp.Commands = []cli.Command{
+		{
+			Name: "db:migrate",
+			Action: func(c *cli.Context) error {
+				server.dbMigrate()
+				return nil
+			},
+		},
+		{
+			Name: "db:seed",
+			Action: func(c *cli.Context) error {
+				err := seeder.DBSeed(server.DB)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+		{
+			Name: "db:delete",
+			Action: func(c *cli.Context) error {
+				err := seeder.DropAllTable(server.DB)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+	}
+
+	err := cmdApp.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (server *Server) Run(addr string) {
@@ -61,6 +112,13 @@ func Run() {
 	appConfig.AppName = os.Getenv("APP_NAME")
 	appConfig.AppPort = os.Getenv("APP_PORT")
 
-	server.Initialize()
-	server.Run(":" + appConfig.AppPort)
+	flag.Parse()
+	arg := flag.Arg(0)
+	if arg != "" {
+		server.initCommands(appConfig)
+	} else {
+		server.Initialize()
+		server.Run(":" + appConfig.AppPort)
+	}
+
 }

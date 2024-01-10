@@ -1,6 +1,7 @@
 package src
 
 import (
+	order "github.com/seronz/api/src/models/Order"
 	products "github.com/seronz/api/src/models/Products"
 	users "github.com/seronz/api/src/models/Users"
 )
@@ -17,5 +18,10 @@ func RegistryModels() []Models {
 		{Models: products.Image{}},
 		{Models: products.Section{}},
 		{Models: products.Categories{}},
+		{Models: order.Order{}},
+		{Models: order.Items{}},
+		{Models: order.Customer{}},
+		{Models: order.Payment{}},
+		{Models: order.Shiment{}},
 	}
 }
