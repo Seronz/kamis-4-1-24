@@ -26,6 +26,21 @@ func (server *Server) Initialize() {
 	fmt.Println("welcome")
 	server.Router = mux.NewRouter()
 	server.InitializeRouter()
+
+	if config.DB == nil {
+		log.Println("error ini nil")
+	}
+
+	server.DB = config.DB
+	for _, model := range RegistryModels() {
+		err := server.DB.Debug().AutoMigrate(model.Models)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	fmt.Println("migration success...")
+
 }
 
 func (server *Server) Run(addr string) {
@@ -34,9 +49,9 @@ func (server *Server) Run(addr string) {
 }
 
 func Run() {
+	config.Connect()
 	var server = Server{}
 	var appConfig = AppConfig{}
-	config.Connect()
 
 	err := godotenv.Load()
 	if err != nil {

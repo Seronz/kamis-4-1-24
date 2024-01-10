@@ -34,9 +34,9 @@ func Connect() {
 	config.dbname = os.Getenv("DATABASE")
 	config.port = os.Getenv("DATABASE_PORT")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
+	dsn := fmt.Sprintf("host=%s user=postgres password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
 		config.host,
-		config.user,
+
 		config.password,
 		config.dbname,
 		config.port)
@@ -45,6 +45,8 @@ func Connect() {
 		log.Panic("failed to open database")
 		panic(err)
 	}
+
 	log.Println("Database Connect")
 	DB = db
+
 }
