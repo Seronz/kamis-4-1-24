@@ -101,6 +101,7 @@ func (server *Server) Run(addr string) {
 
 func Run() {
 	config.Connect()
+	config.ConnectMongo()
 	var server = Server{}
 	var appConfig = AppConfig{}
 
