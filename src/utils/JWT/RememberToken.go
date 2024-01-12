@@ -40,9 +40,9 @@ func loadJWTConfig(params Params) (*JWTConfig, error) {
 
 	var ExpDuration time.Duration
 
-	if params.Userrole == "guest" {
+	if params.Userrole == "" {
 		ExpDuration = time.Duration(2) * time.Hour
-	} else {
+	} else if params.Userrole == "user" || params.Userrole == "admin" {
 		ExpDuration = time.Duration(48) * time.Hour
 	}
 

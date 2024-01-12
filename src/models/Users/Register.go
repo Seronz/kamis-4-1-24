@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	encryption "github.com/seronz/api/src/utils/Encryption"
 	jwt "github.com/seronz/api/src/utils/JWT"
 	otp "github.com/seronz/api/src/utils/OTP"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,6 +23,7 @@ type User struct {
 	LastName      string    `bson:"last_name" gorm:"size:100;not null" json:"last_name"`
 	Email         string    `bson:"email" gorm:"size:100;not null" json:"email"`
 	Password      string    `bson:"password" gorm:"size:100;not null" json:"password"`
+	Salt          string    `bson:"salt" gorm:"size:100;not null" json:"salt"`
 	UserRole      string    `bson:"user_role" gorm:"size:10;not null;default:'user'" json:"user_role"`
 	OtpCode       string    `bson:"otp_code" gorm:"size:10" json:"otp_code"`
 	IsActive      bool      `bson:"is_active" gorm:"type:boolean;default:true" json:"is_active"`
@@ -57,7 +59,14 @@ func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, 
 		return nil, "", err
 	}
 
+	pw, salt, err := encryption.EncryptPassword(user.Password)
+	if err != nil {
+		return nil, "", err
+	}
+
 	expireTime := time.Now().Add(2 * time.Hour)
+	user.Password = pw
+	user.Salt = salt
 	user.RememberToken = token
 	user.OtpCode = otp
 	user.ExpiredAt = expireTime
@@ -81,13 +90,9 @@ func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, 
 }
 
 func findUser(mg *mongo.Client, otp string) (User, error) {
-
-	fmt.Println("ini otp user", otp)
 	collection := ConnectionMongo(mg)
 	otpTrim := strings.TrimSpace(otp)
 	filter := bson.D{{Key: "otp_code", Value: otpTrim}}
-
-	fmt.Printf("Filter Type: %T, Filter Value: %v\n", filter, filter)
 
 	var users User
 	err := collection.FindOne(ctx, filter).Decode(&users)
@@ -95,8 +100,6 @@ func findUser(mg *mongo.Client, otp string) (User, error) {
 		fmt.Println("ini error:", err)
 		return User{}, err
 	}
-
-	fmt.Printf("ini otp : %s", users.ID)
 
 	err = verificationOTP(users, otpTrim)
 	if err != nil {
@@ -107,8 +110,6 @@ func findUser(mg *mongo.Client, otp string) (User, error) {
 
 func verificationOTP(result User, otp string) error {
 
-	fmt.Println("ini otp mongo", result.OtpCode)
-	fmt.Println("ini otp input", result.ExpiredAt)
 	if result.ExpiredAt.Before(time.Now()) {
 		return errors.New("OTP anda telah kadaluarsa")
 	}
@@ -117,6 +118,19 @@ func verificationOTP(result User, otp string) error {
 		return errors.New("kode OTP anda salah")
 	}
 
+	return nil
+}
+
+func deleteDataMongo(mg *mongo.Client, otp string) error {
+	collection := ConnectionMongo(mg)
+
+	trimOtp := strings.TrimSpace(otp)
+
+	filter := bson.D{{Key: "otp_code", Value: trimOtp}}
+	_, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -129,6 +143,11 @@ func ActivationAccount(db *gorm.DB, mg *mongo.Client, otp string) error {
 	res := db.Create(&result)
 	if res.Error != nil {
 		return res.Error
+	}
+
+	err = deleteDataMongo(mg, otp)
+	if err != nil {
+		return err
 	}
 	return nil
 }
