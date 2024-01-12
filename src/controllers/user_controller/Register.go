@@ -2,6 +2,7 @@ package usercontroller
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/seronz/api/config"
@@ -21,7 +22,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 	}
 
-	data, err := users.UserRegister(config.DB, config.Mongo, User)
+	data, token, err := users.UserRegister(config.Mongo, User)
 	if err != nil {
 		res := response.Response{
 			W:        w,
@@ -30,9 +31,44 @@ func User(w http.ResponseWriter, r *http.Request) {
 		}
 		response.ResponseFailed(res)
 	}
+
+	w.Header().Set("aauthorization", token)
+	w.Header().Set("Access-Control-Expose-Headers", "authorization")
 	res := response.Response{
 		W:        w,
 		Data:     data,
+		Messages: "Success",
+	}
+	response.ResponseSuccess(res)
+}
+
+func ActivateAccount(w http.ResponseWriter, r *http.Request) {
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		res := response.Response{
+			W:        w,
+			Err:      err,
+			Messages: err.Error(),
+		}
+		response.ResponseFailed(res)
+		return
+	}
+	otp := string(body)
+
+	err = users.ActivationAccount(config.DB, config.Mongo, otp)
+	if err != nil {
+		res := response.Response{
+			W:        w,
+			Err:      err,
+			Messages: err.Error(),
+		}
+		response.ResponseFailed(res)
+		return
+	}
+
+	res := response.Response{
+		W:        w,
 		Messages: "Success",
 	}
 	response.ResponseSuccess(res)

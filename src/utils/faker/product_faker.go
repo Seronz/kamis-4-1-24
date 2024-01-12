@@ -23,7 +23,7 @@ func ProductFaker(db *gorm.DB) *products.Products {
 	name := faker.Name()
 	return &products.Products{
 		ID:               uuid.NewString(),
-		UserID:           user.Id,
+		UserID:           user.ID,
 		Sku:              slug.Make(name),
 		Name:             name,
 		Slug:             slug.Make(name),

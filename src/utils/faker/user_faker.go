@@ -11,7 +11,7 @@ import (
 
 func UserFaker(db *gorm.DB) *users.User {
 	return &users.User{
-		Id:            uuid.New().String(),
+		ID:            uuid.New().String(),
 		FirstName:     faker.FirstName(),
 		LastName:      faker.LastName(),
 		Email:         faker.Email(),

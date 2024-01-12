@@ -121,5 +121,4 @@ func Run() {
 		server.Initialize()
 		server.Run(":" + appConfig.AppPort)
 	}
-
 }
