@@ -191,6 +191,7 @@ func JWTParser(header string) (*jwt.Token, error) {
 	fmt.Println("ini application name:", res.ApplicationName)
 	token, err := jwt.Parse(header, func(t *jwt.Token) (interface{}, error) {
 		if method, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			fmt.Println("erronya gak ok")
 			return nil, errors.New("signing method invalid")
 		} else if method != res.JWTSigningMethod {
 			fmt.Println("errornya disini kak")
@@ -200,6 +201,7 @@ func JWTParser(header string) (*jwt.Token, error) {
 	})
 
 	if err != nil {
+		fmt.Printf("errornya disini syg, ini ya errornya : %s \n", err)
 		return nil, err
 	}
 

@@ -5,21 +5,77 @@ import (
 	"errors"
 	"net/http"
 
-	cookie "github.com/seronz/api/src/utils/Cookie"
 	encryption "github.com/seronz/api/src/utils/Encryption"
 	jwt "github.com/seronz/api/src/utils/JWT"
 	"gorm.io/gorm"
 )
 
 func (l *User) getUserCredentials(db *gorm.DB) error {
-	err := db.Select("id, first_name, last_name, user_role,email, password, salt, remember_me").Where("email = ?", l.Email).First(&l).Error
+	err := db.Select("id, first_name, last_name, user_role, email, password, salt").Where("email = ?", l.Email).First(&l).Error
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Login(db *gorm.DB, w http.ResponseWriter, r *http.Request, user User) (string, error) {
+func (l *User) updateActivateRememberMe(db *gorm.DB, remember string) error {
+	result := db.Model(&User{}).Where("email = ?", l.Email).
+		Update("remember_me", l.RememberMe).
+		Update("remember_token", remember)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func DeleteRememberToken(db *gorm.DB, user User) error {
+	var u User
+
+	u.Email = user.Email
+	err := u.getUserCredentials(db)
+	if err != nil {
+		return err
+	}
+	remember := ""
+	err = u.updateActivateRememberMe(db, remember)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateRememberToken(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
+	var u User
+
+	u.Email = user.Email
+	u.RememberMe = user.RememberMe
+	err := u.getUserCredentials(db)
+	if err != nil {
+		return "", err
+	}
+
+	params := jwt.Params{
+		W:          w,
+		ID:         u.ID,
+		Firstname:  u.FirstName,
+		Lastname:   u.LastName,
+		Userrole:   u.UserRole,
+		Email:      u.Email,
+		RememberMe: u.RememberMe,
+	}
+	remember, err := jwt.CreateRememberToken(params)
+	if err != nil {
+		return "", err
+	}
+	err = u.updateActivateRememberMe(db, remember)
+	if err != nil {
+		return "", err
+	}
+	return remember, nil
+}
+
+func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
 	var u User
 
 	u.Email = user.Email
@@ -32,7 +88,7 @@ func Login(db *gorm.DB, w http.ResponseWriter, r *http.Request, user User) (stri
 		return "", errors.New("user not found")
 	}
 
-	s, err := encryption.DecryptPassword(u.Password, u.Salt)
+	s, err := encryption.DecryptPassword(user.Password, u.Salt)
 	if err != nil {
 		return "", err
 	}
@@ -49,22 +105,6 @@ func Login(db *gorm.DB, w http.ResponseWriter, r *http.Request, user User) (stri
 		Userrole:   u.UserRole,
 		Email:      u.Email,
 		RememberMe: u.RememberMe,
-	}
-
-	if user.RememberMe {
-		remember, err := jwt.CreateRememberToken(params)
-		if err != nil {
-			return "", err
-		}
-
-		cookie.SetCookieHandler(w, r, remember)
-		result := db.Model(&User{}).Where("id = ?", u.ID).
-			Update("remember_me", true).
-			Update("remember_token", remember)
-
-		if result.Error != nil {
-			return "", result.Error
-		}
 	}
 
 	token, err := jwt.CreateToken(params)

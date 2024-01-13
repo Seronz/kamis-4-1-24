@@ -32,7 +32,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 	}
 
-	w.Header().Set("aauthorization", token)
+	w.Header().Set("authorization", token)
 	w.Header().Set("Access-Control-Expose-Headers", "authorization")
 	res := response.Response{
 		W:        w,
