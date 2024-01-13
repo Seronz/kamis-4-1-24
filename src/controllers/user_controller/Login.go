@@ -22,7 +22,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 	}
 
-	result, err := users.Login(config.DB, w, user)
+	result, err := users.Login(config.DB, w, r, user)
 	if err != nil {
 		res := response.Response{
 			W:        w,

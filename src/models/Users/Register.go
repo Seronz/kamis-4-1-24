@@ -27,6 +27,7 @@ type User struct {
 	UserRole      string    `bson:"user_role" gorm:"size:10;not null;default:'user'" json:"user_role"`
 	OtpCode       string    `bson:"otp_code" gorm:"size:10" json:"otp_code"`
 	IsActive      bool      `bson:"is_active" gorm:"type:boolean;default:true" json:"is_active"`
+	RememberMe    bool      `bson:"remember_me" gorm:"type:boolean;default:false" json:"remember_me"`
 	RememberToken string    `bson:"remember_token" gorm:"type:text;not null" json:"remember_token"`
 	CreatedAt     time.Time `bson:"CreatedAt" json:"created_at"`
 	UpdatedAt     time.Time `bson:"UpdatedAt" json:"updated_at"`
@@ -67,7 +68,6 @@ func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, 
 	expireTime := time.Now().Add(2 * time.Hour)
 	user.Password = pw
 	user.Salt = salt
-	user.RememberToken = token
 	user.OtpCode = otp
 	user.ExpiredAt = expireTime
 

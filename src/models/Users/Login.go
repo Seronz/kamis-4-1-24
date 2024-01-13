@@ -5,20 +5,21 @@ import (
 	"errors"
 	"net/http"
 
+	cookie "github.com/seronz/api/src/utils/Cookie"
 	encryption "github.com/seronz/api/src/utils/Encryption"
 	jwt "github.com/seronz/api/src/utils/JWT"
 	"gorm.io/gorm"
 )
 
 func (l *User) getUserCredentials(db *gorm.DB) error {
-	err := db.Select("first_name, last_name, user_role,email, password, salt").Where("email = ?", l.Email).First(&l).Error
+	err := db.Select("id, first_name, last_name, user_role,email, password, salt, remember_me").Where("email = ?", l.Email).First(&l).Error
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
+func Login(db *gorm.DB, w http.ResponseWriter, r *http.Request, user User) (string, error) {
 	var u User
 
 	u.Email = user.Email
@@ -41,12 +42,31 @@ func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
 	}
 
 	params := jwt.Params{
-		W:         w,
-		Firstname: u.FirstName,
-		Lastname:  u.LastName,
-		Userrole:  u.UserRole,
-		Email:     u.Email,
+		W:          w,
+		ID:         u.ID,
+		Firstname:  u.FirstName,
+		Lastname:   u.LastName,
+		Userrole:   u.UserRole,
+		Email:      u.Email,
+		RememberMe: u.RememberMe,
 	}
+
+	if user.RememberMe {
+		remember, err := jwt.CreateRememberToken(params)
+		if err != nil {
+			return "", err
+		}
+
+		cookie.SetCookieHandler(w, r, remember)
+		result := db.Model(&User{}).Where("id = ?", u.ID).
+			Update("remember_me", true).
+			Update("remember_token", remember)
+
+		if result.Error != nil {
+			return "", result.Error
+		}
+	}
+
 	token, err := jwt.CreateToken(params)
 	if err != nil {
 		return "", err

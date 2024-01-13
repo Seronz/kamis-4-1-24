@@ -13,18 +13,22 @@ import (
 
 type MyClaims struct {
 	jwt.StandardClaims
-	FIRSTNAME string `json:"firstname"`
-	LASTNAME  string `json:"lastname"`
-	EMAIL     string `json:"email"`
-	USERROLE  string `json:"userrole"`
+	ID         string `json:"id"`
+	FIRSTNAME  string `json:"firstname"`
+	LASTNAME   string `json:"lastname"`
+	EMAIL      string `json:"email"`
+	USERROLE   string `json:"userrole"`
+	REMEMBERME bool   `json:"remember_me"`
 }
 
 type Params struct {
-	W         http.ResponseWriter
-	Firstname string
-	Lastname  string
-	Email     string
-	Userrole  string
+	W          http.ResponseWriter
+	ID         string
+	Firstname  string
+	Lastname   string
+	Email      string
+	Userrole   string
+	RememberMe bool
 }
 
 type JWTConfig struct {
@@ -34,7 +38,7 @@ type JWTConfig struct {
 	JWTSignatureKey       []byte
 }
 
-func (p *Params) validationJWT() (*JWTConfig, error) {
+func (p *Params) loadEnvJWT() (*JWTConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, err
@@ -77,11 +81,37 @@ func (p *Params) validationJWT() (*JWTConfig, error) {
 
 // }
 
+func generateRememberToken(param Params) (MyClaims, error) {
+	var p Params
+
+	p.RememberMe = param.RememberMe
+	config, err := p.loadEnvJWT()
+	if err != nil {
+		return MyClaims{}, err
+	}
+
+	remember := MyClaims{
+		StandardClaims: jwt.StandardClaims{
+			Issuer:    config.ApplicationName,
+			ExpiresAt: time.Now().Add(time.Duration(168) * time.Hour).Unix(),
+			Subject:   param.Email,
+		},
+		ID:         param.ID,
+		FIRSTNAME:  param.Firstname,
+		LASTNAME:   param.Lastname,
+		EMAIL:      param.Email,
+		USERROLE:   param.Userrole,
+		REMEMBERME: param.RememberMe,
+	}
+	return remember, nil
+}
+
 func generateClaims(param Params) (MyClaims, error) {
 	var p Params
 
 	p.Userrole = param.Userrole
-	config, err := p.validationJWT()
+
+	config, err := p.loadEnvJWT()
 	if err != nil {
 		return MyClaims{}, err
 	}
@@ -97,7 +127,32 @@ func generateClaims(param Params) (MyClaims, error) {
 		EMAIL:     param.Email,
 		USERROLE:  param.Userrole,
 	}
+
 	return claims, nil
+}
+
+func CreateRememberToken(param Params) (string, error) {
+	remember, err := generateRememberToken(param)
+	if err != nil {
+		return "", err
+	}
+
+	var p Params
+	p.RememberMe = param.RememberMe
+	config, err := p.loadEnvJWT()
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(
+		config.JWTSigningMethod,
+		remember,
+	)
+	rememberToken, err := token.SignedString(config.JWTSignatureKey)
+	if err != nil {
+		return "", err
+	}
+	return rememberToken, nil
 }
 
 func CreateToken(params Params) (string, error) {
@@ -107,8 +162,8 @@ func CreateToken(params Params) (string, error) {
 	}
 	var p Params
 
-	p.Userrole = params.Lastname
-	config, err := p.validationJWT()
+	p.Userrole = params.Userrole
+	config, err := p.loadEnvJWT()
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +183,7 @@ func CreateToken(params Params) (string, error) {
 
 func JWTParser(header string) (*jwt.Token, error) {
 	var p Params
-	res, err := p.validationJWT()
+	res, err := p.loadEnvJWT()
 	if err != nil {
 		return nil, err
 	}
