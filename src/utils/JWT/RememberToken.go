@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -187,23 +186,41 @@ func JWTParser(header string) (*jwt.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ini signing method:\n", res.JWTSigningMethod)
-	fmt.Println("ini application name:", res.ApplicationName)
+
 	token, err := jwt.Parse(header, func(t *jwt.Token) (interface{}, error) {
 		if method, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			fmt.Println("erronya gak ok")
 			return nil, errors.New("signing method invalid")
 		} else if method != res.JWTSigningMethod {
-			fmt.Println("errornya disini kak")
 			return nil, errors.New("method invalid")
 		}
 		return res.JWTSignatureKey, nil
 	})
 
 	if err != nil {
-		fmt.Printf("errornya disini syg, ini ya errornya : %s \n", err)
 		return nil, err
 	}
 
 	return token, nil
+}
+
+func JWTGetClaims(t string) (string, error) {
+	token, err := JWTParser(t)
+	if err != nil {
+		return "", err
+	}
+
+	var user_email string
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		email, ok := claims["sub"]
+		if !ok {
+			return "", errors.New("sub claims not found")
+		}
+
+		user_email = email.(string)
+	} else {
+		return "", errors.New("invalid or expired token")
+	}
+	return user_email, nil
 }

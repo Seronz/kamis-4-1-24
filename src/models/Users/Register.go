@@ -35,6 +35,11 @@ type User struct {
 	DeletedAt     gorm.DeletedAt
 }
 
+type MongoParam struct {
+	update bson.D
+	filter bson.D
+}
+
 var ctx = context.TODO()
 
 func ConnectionMongo(mg *mongo.Client) *mongo.Collection {
@@ -150,4 +155,44 @@ func ActivationAccount(db *gorm.DB, mg *mongo.Client, otp string) error {
 		return err
 	}
 	return nil
+}
+
+func (m *MongoParam) updateOTP(mg *mongo.Client) error {
+	collection := ConnectionMongo(mg)
+
+	_, err := collection.UpdateOne(ctx, m.filter, m.update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RegenerateOTP(db *gorm.DB, mg *mongo.Client, token string) (string, error) {
+	email, err := jwt.JWTGetClaims(token)
+	if err != nil {
+		return "", err
+	}
+
+	otp, err := otp.GenerateOTP(email)
+	if err != nil {
+		return "", err
+	}
+
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "otp_code", Value: otp},
+		}},
+	}
+
+	filter := bson.D{{Key: "email", Value: email}}
+
+	var m MongoParam
+	m.update = update
+	m.filter = filter
+	err = m.updateOTP(mg)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("ini otp ya", email)
+	return "", nil
 }

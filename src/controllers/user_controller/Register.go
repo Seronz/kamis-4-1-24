@@ -73,3 +73,18 @@ func ActivateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	response.ResponseSuccess(res)
 }
+
+func GenerateOTP(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.Header.Get("Authorization")
+
+	_, err := users.RegenerateOTP(config.DB, tokenStr)
+	if err != nil {
+		res := response.Response{
+			W:        w,
+			Err:      err,
+			Messages: err.Error(),
+		}
+		response.ResponseFailed(res)
+		return
+	}
+}
