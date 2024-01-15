@@ -13,5 +13,5 @@ func (server *Server) InitializeRouter() {
 	server.Router.HandleFunc("/regenerate_otp", usercontroller.GenerateOTP).Methods("POST")
 	server.Router.HandleFunc("/activate", usercontroller.ActivateAccount).Methods("POST")
 	server.Router.HandleFunc("/login", usercontroller.Login).Methods("POST")
-
+	server.Router.HandleFunc("/address/create", usercontroller.CreateAddress).Methods("POST")
 }

@@ -30,7 +30,6 @@ func LoggerMiddelware(next http.Handler) http.Handler {
 		}
 
 		token, err := jwt.JWTParser(authorization_header)
-		fmt.Println("ini tokennya", token)
 		if err != nil {
 			fmt.Println("error disini 2")
 			res := map[string]interface{}{"error middleware": err}

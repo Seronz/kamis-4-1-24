@@ -111,5 +111,6 @@ func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return token, nil
 }

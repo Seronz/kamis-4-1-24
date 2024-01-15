@@ -168,12 +168,22 @@ func (m *MongoParam) updateOTP(mg *mongo.Client) error {
 }
 
 func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
-	email, err := jwt.JWTGetClaims(token)
+	claims, err := jwt.JWTGetClaims(token)
 	if err != nil {
 		return "", err
 	}
 
-	otp, err := otp.GenerateOTP(email)
+	mycalims := claims.(struct {
+		Sub        string
+		Id         string
+		Email      string
+		Firstname  string
+		Lastname   string
+		Rememberme bool
+		Userrole   string
+	})
+
+	otp, err := otp.GenerateOTP(mycalims.Email)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +194,7 @@ func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
 		}},
 	}
 
-	filter := bson.D{{Key: "email", Value: email}}
+	filter := bson.D{{Key: "email", Value: mycalims.Email}}
 
 	var m MongoParam
 	m.update = update
@@ -193,6 +203,6 @@ func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("ini otp ya", email)
-	return "", nil
+
+	return otp, nil
 }

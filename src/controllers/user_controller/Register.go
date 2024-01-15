@@ -77,7 +77,7 @@ func ActivateAccount(w http.ResponseWriter, r *http.Request) {
 func GenerateOTP(w http.ResponseWriter, r *http.Request) {
 	tokenStr := r.Header.Get("Authorization")
 
-	_, err := users.RegenerateOTP(config.Mongo, tokenStr)
+	otp, err := users.RegenerateOTP(config.Mongo, tokenStr)
 	if err != nil {
 		res := response.Response{
 			W:        w,
@@ -87,4 +87,11 @@ func GenerateOTP(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 		return
 	}
+
+	res := response.Response{
+		W:        w,
+		Data:     otp,
+		Messages: "Success",
+	}
+	response.ResponseSuccess(res)
 }

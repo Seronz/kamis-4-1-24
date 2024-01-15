@@ -121,6 +121,7 @@ func generateClaims(param Params) (MyClaims, error) {
 			ExpiresAt: time.Now().Add(config.LogExpirationDuration).Unix(),
 			Subject:   param.Email,
 		},
+		ID:        param.ID,
 		FIRSTNAME: param.Firstname,
 		LASTNAME:  param.Lastname,
 		EMAIL:     param.Email,
@@ -203,24 +204,41 @@ func JWTParser(header string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func JWTGetClaims(t string) (string, error) {
+func JWTGetClaims(t string) (interface{}, error) {
 	token, err := JWTParser(t)
 	if err != nil {
 		return "", err
 	}
 
-	var user_email string
-
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if ok && token.Valid {
-		email, ok := claims["sub"]
-		if !ok {
-			return "", errors.New("sub claims not found")
-		}
-
-		user_email = email.(string)
-	} else {
-		return "", errors.New("invalid or expired token")
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid or expired token")
 	}
-	return user_email, nil
+
+	requiredFields := []string{"sub", "id", "firstname", "lastname", "remember_me", "userrole"}
+	for _, j := range requiredFields {
+		if _, ok := claims[j]; !ok {
+			return nil, errors.New(j + " sub claims not found")
+		}
+	}
+
+	Myclaims := struct {
+		Sub        string
+		Id         string
+		Email      string
+		Firstname  string
+		Lastname   string
+		Rememberme bool
+		Userrole   string
+	}{
+		Sub:        claims["sub"].(string),
+		Id:         claims["id"].(string),
+		Email:      claims["email"].(string),
+		Firstname:  claims["firstname"].(string),
+		Lastname:   claims["lastname"].(string),
+		Rememberme: claims["remember_me"].(bool),
+		Userrole:   claims["userrole"].(string),
+	}
+
+	return Myclaims, nil
 }
