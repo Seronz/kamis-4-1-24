@@ -167,7 +167,7 @@ func (m *MongoParam) updateOTP(mg *mongo.Client) error {
 	return nil
 }
 
-func RegenerateOTP(db *gorm.DB, mg *mongo.Client, token string) (string, error) {
+func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
 	email, err := jwt.JWTGetClaims(token)
 	if err != nil {
 		return "", err
