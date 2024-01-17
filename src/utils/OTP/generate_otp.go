@@ -1,7 +1,6 @@
 package otp
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -26,9 +25,9 @@ func GenerateOTP(email string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := key.URL()
+	// url := key.URL()
 
-	fmt.Println(url)
+	// fmt.Println(url)
 
 	otpCode, err := totp.GenerateCode(key.Secret(), time.Now())
 	if err != nil {

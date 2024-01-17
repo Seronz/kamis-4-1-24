@@ -25,7 +25,7 @@ func CreateAddress(w http.ResponseWriter, r *http.Request) {
 
 	user_token := r.Header.Get("Authorization")
 
-	_, err = users.CreateAddress(config.DB, address, user_token)
+	_, err = users.CreateAddress(config.DB, user_token)
 	if err != nil {
 		res := response.Response{
 			W:        w,

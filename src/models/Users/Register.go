@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	otp "github.com/seronz/api/src/utils/OTP"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/gorm"
 )
 
@@ -47,8 +49,7 @@ func ConnectionMongo(mg *mongo.Client) *mongo.Collection {
 	return collection
 }
 
-func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, error) {
-
+func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, string, error) {
 	param := jwt.Params{
 		Firstname: user.FirstName,
 		Lastname:  user.LastName,
@@ -57,17 +58,17 @@ func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, 
 	}
 	token, err := jwt.CreateToken(param)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	otp, err := otp.GenerateOTP(user.Email)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	pw, salt, err := encryption.EncryptPassword(user.Password)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	expireTime := time.Now().Add(2 * time.Hour)
@@ -79,19 +80,29 @@ func UserRegister(mg *mongo.Client, user User) (*mongo.InsertOneResult, string, 
 	userMap := make(map[string]interface{})
 	userBytes, err := json.Marshal(user)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	if err := json.Unmarshal(userBytes, &userMap); err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	collection := ConnectionMongo(mg)
-	insertResult, err := collection.InsertOne(ctx, userMap)
-	if err != nil {
-		return nil, "", err
+	emailIndex := mongo.IndexModel{
+		Keys:    bson.M{"email": 1},
+		Options: options.Index().SetUnique(true),
 	}
 
-	return insertResult, token, nil
+	_, err = collection.Indexes().CreateOne(ctx, emailIndex)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	insertResult, err := collection.InsertOne(ctx, userMap)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return insertResult, token, otp, nil
 }
 
 func findUser(mg *mongo.Client, otp string) (User, error) {
@@ -114,7 +125,6 @@ func findUser(mg *mongo.Client, otp string) (User, error) {
 }
 
 func verificationOTP(result User, otp string) error {
-
 	if result.ExpiredAt.Before(time.Now()) {
 		return errors.New("OTP anda telah kadaluarsa")
 	}
@@ -140,10 +150,13 @@ func deleteDataMongo(mg *mongo.Client, otp string) error {
 }
 
 func ActivationAccount(db *gorm.DB, mg *mongo.Client, otp string) error {
+
 	result, err := findUser(mg, otp)
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Activate Account : %s %s ", result.FirstName, result.LastName)
 
 	res := db.Create(&result)
 	if res.Error != nil {
@@ -173,17 +186,7 @@ func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
 		return "", err
 	}
 
-	mycalims := claims.(struct {
-		Sub        string
-		Id         string
-		Email      string
-		Firstname  string
-		Lastname   string
-		Rememberme bool
-		Userrole   string
-	})
-
-	otp, err := otp.GenerateOTP(mycalims.Email)
+	otp, err := otp.GenerateOTP(claims.Email)
 	if err != nil {
 		return "", err
 	}
@@ -194,7 +197,7 @@ func RegenerateOTP(mg *mongo.Client, token string) (string, error) {
 		}},
 	}
 
-	filter := bson.D{{Key: "email", Value: mycalims.Email}}
+	filter := bson.D{{Key: "email", Value: claims.Email}}
 
 	var m MongoParam
 	m.update = update

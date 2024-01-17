@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	jwt "github.com/seronz/api/src/utils/JWT"
 	"gorm.io/gorm"
 )
@@ -41,24 +42,22 @@ func (l *Address) GetAddress(db *gorm.DB) error {
 	return nil
 }
 
-func CreateAddress(db *gorm.DB, address Address, user_token string) (Address, error) {
-	fmt.Println(user_token)
+func CreateAddress(db *gorm.DB, user_token string) (Address, error) {
 	claims, err := jwt.JWTGetClaims(user_token)
 	if err != nil {
 		return Address{}, err
 	}
 
-	mycalims := claims.(struct {
-		Sub        string
-		Id         string
-		Email      string
-		Firstname  string
-		Lastname   string
-		Rememberme bool
-		Userrole   string
-	})
+	var a Address
 
-	fmt.Println("ini emailmu ", mycalims.Id)
+	a.ID = uuid.NewString()
+	a.UserID = claims.ID
+	a.Name = claims.Firstname + claims.Lastname
+	fmt.Printf("ini id mu : %s \n", claims.ID)
+	// err = a.CreateAddress(db)
+	// if err != nil {
+	// 	return Address{}, err
+	// }
 
 	return Address{}, nil
 }

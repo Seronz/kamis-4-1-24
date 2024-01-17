@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -15,14 +16,15 @@ import (
 func LoggerMiddelware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/register" ||
-			r.URL.Path == "/login" {
+			r.URL.Path == "/login" || r.URL.Path == "/" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		authorization_header := r.Header.Get("Authorization")
+
 		if !strings.Contains(authorization_header, "") {
-			fmt.Println("error disini")
+			log.Println("middleware : token contains invalid characters")
 			res := map[string]string{"error middelware": "invalid token"}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(res)
@@ -31,7 +33,7 @@ func LoggerMiddelware(next http.Handler) http.Handler {
 
 		token, err := jwt.JWTParser(authorization_header)
 		if err != nil {
-			fmt.Println("error disini 2")
+			log.Println(fmt.Errorf("middleware : %s", err))
 			res := map[string]interface{}{"error middleware": err}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(res)
@@ -40,7 +42,7 @@ func LoggerMiddelware(next http.Handler) http.Handler {
 
 		claims, ok := token.Claims.(j.MapClaims)
 		if !ok || !token.Valid {
-			fmt.Println("error disini 3")
+			log.Println("middleware : invalid token")
 			res := map[string]interface{}{"error middleware": errors.New("token invalid")}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(res)

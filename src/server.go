@@ -95,7 +95,7 @@ func (server *Server) initCommands(config AppConfig) {
 }
 
 func (server *Server) Run(addr string) {
-	fmt.Printf("Listening to port %s", addr)
+	fmt.Printf("Listening to port %s \n", addr)
 	log.Fatal(http.ListenAndServe(addr, server.Router))
 }
 

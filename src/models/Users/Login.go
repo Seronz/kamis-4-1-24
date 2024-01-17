@@ -3,6 +3,8 @@ package users
 import (
 	"crypto/subtle"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 
 	encryption "github.com/seronz/api/src/utils/Encryption"
@@ -81,19 +83,23 @@ func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
 	u.Email = user.Email
 	err := u.getUserCredentials(db)
 	if err != nil {
+		log.Println(fmt.Errorf("%s %s login failed \n %s", u.FirstName, u.LastName, err))
 		return "", err
 	}
 
 	if u.Password == "" {
+		log.Println(fmt.Errorf("%s %s login failed : user not found", u.FirstName, u.LastName))
 		return "", errors.New("user not found")
 	}
 
 	s, err := encryption.DecryptPassword(user.Password, u.Salt)
 	if err != nil {
+		log.Println(fmt.Errorf("%s %s login failed \n %s", u.FirstName, u.LastName, err))
 		return "", err
 	}
 
 	if subtle.ConstantTimeCompare([]byte(u.Password), []byte(s)) != 1 {
+		log.Println(fmt.Errorf("%s %s login failed. invalid username or password", u.FirstName, u.LastName))
 		return "", errors.New("invalid username or password")
 	}
 
@@ -109,8 +115,10 @@ func Login(db *gorm.DB, w http.ResponseWriter, user User) (string, error) {
 
 	token, err := jwt.CreateToken(params)
 	if err != nil {
+		log.Println(fmt.Errorf("%s %s login failed \n %s", u.FirstName, u.LastName, err))
 		return "", err
 	}
 
+	log.Printf("%s %s login success... \n", u.FirstName, u.LastName)
 	return token, nil
 }

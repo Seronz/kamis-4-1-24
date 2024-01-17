@@ -37,6 +37,15 @@ type JWTConfig struct {
 	JWTSignatureKey       []byte
 }
 
+type RecivedClaims struct {
+	ID         string
+	Firstname  string
+	Lastname   string
+	Email      string
+	Userrole   string
+	Rememberme bool
+}
+
 func (p *Params) loadEnvJWT() (*JWTConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
@@ -204,41 +213,32 @@ func JWTParser(header string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func JWTGetClaims(t string) (interface{}, error) {
+func JWTGetClaims(t string) (RecivedClaims, error) {
 	token, err := JWTParser(t)
 	if err != nil {
-		return "", err
+		return RecivedClaims{}, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid or expired token")
+		return RecivedClaims{}, errors.New("invalid or expired token")
 	}
 
 	requiredFields := []string{"sub", "id", "firstname", "lastname", "remember_me", "userrole"}
 	for _, j := range requiredFields {
 		if _, ok := claims[j]; !ok {
-			return nil, errors.New(j + " sub claims not found")
+			return RecivedClaims{}, errors.New(j + " sub claims not found")
 		}
 	}
 
-	Myclaims := struct {
-		Sub        string
-		Id         string
-		Email      string
-		Firstname  string
-		Lastname   string
-		Rememberme bool
-		Userrole   string
-	}{
-		Sub:        claims["sub"].(string),
-		Id:         claims["id"].(string),
-		Email:      claims["email"].(string),
+	myClaims := RecivedClaims{
+		ID:         claims["id"].(string),
+		Email:      claims["sub"].(string),
 		Firstname:  claims["firstname"].(string),
 		Lastname:   claims["lastname"].(string),
 		Rememberme: claims["remember_me"].(bool),
 		Userrole:   claims["userrole"].(string),
 	}
 
-	return Myclaims, nil
+	return myClaims, nil
 }

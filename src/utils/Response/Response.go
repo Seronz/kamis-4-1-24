@@ -30,7 +30,7 @@ func ResponseSuccess(response Response) {
 		W:        response.W,
 		Status:   http.StatusOK,
 		Data:     response.Data,
-		Messages: "Success",
+		Messages: response.Messages,
 	}
 	writeJsonResponse(r)
 }

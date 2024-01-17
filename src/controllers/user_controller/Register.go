@@ -2,7 +2,8 @@ package usercontroller
 
 import (
 	"encoding/json"
-	"io"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/seronz/api/config"
@@ -11,8 +12,11 @@ import (
 )
 
 func User(w http.ResponseWriter, r *http.Request) {
+
 	var User users.User
 	err := json.NewDecoder(r.Body).Decode(&User)
+
+	log.Printf("register : %s %s", User.FirstName, User.LastName)
 	if err != nil {
 		res := response.Response{
 			W:        w,
@@ -22,7 +26,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 	}
 
-	data, token, err := users.UserRegister(config.Mongo, User)
+	data, token, otp, err := users.UserRegister(config.Mongo, User)
 	if err != nil {
 		res := response.Response{
 			W:        w,
@@ -37,15 +41,17 @@ func User(w http.ResponseWriter, r *http.Request) {
 	res := response.Response{
 		W:        w,
 		Data:     data,
-		Messages: "Success",
+		Messages: otp,
 	}
 	response.ResponseSuccess(res)
 }
 
 func ActivateAccount(w http.ResponseWriter, r *http.Request) {
+	var user users.User
 
-	body, err := io.ReadAll(r.Body)
+	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		log.Println(fmt.Errorf("activate account :  %s", err))
 		res := response.Response{
 			W:        w,
 			Err:      err,
@@ -54,9 +60,7 @@ func ActivateAccount(w http.ResponseWriter, r *http.Request) {
 		response.ResponseFailed(res)
 		return
 	}
-	otp := string(body)
-
-	err = users.ActivationAccount(config.DB, config.Mongo, otp)
+	err = users.ActivationAccount(config.DB, config.Mongo, user.OtpCode)
 	if err != nil {
 		res := response.Response{
 			W:        w,
